@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Addition Practice</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #eef0f8;
+  --panel: #ffffff;
+  --border: #d4d8f0;
+  --cell-bg: #f4f5fb;
+  --cell-border: #c8cce8;
+  --text: #1e2255;
+  --blue: #4a5fd5;
+  --blue-dark: #3347c0;
+  --blue-light: #6b7ee8;
+  --purple-light: #9b5de5;
+  --yellow: #e07d00;
+  --yellow-bg: #fff5e0;
+  --yellow-border: #f5a623;
+  --green: #10b981;
+  --green-dark: #059669;
+  --green-bg: #d1fae5;
+  --red: #ef4444;
+  --red-bg: #fee2e2;
+  --dashed-bg: #eef0ff;
+  --carry-bg: #f3e8ff;
+  --carry-border: #9b5de5;
+  --active-bg: #fff5e0;
+  --active-border: #f5a623;
+  --active-text: #b45309;
+  --S: 64px;
+  --G: 6px;
+  --CS: 46px;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 12px 56px;
+}
+
+/* ── Mode selector ── */
+#mode-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.mode-btn {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 8px 18px;
+  border-radius: 50px;
+  border: 2.5px solid var(--border);
+  background: var(--panel);
+  color: #6b7a99;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.mode-btn.active {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.mode-btn:hover:not(.active) {
+  border-color: var(--blue-light);
+  color: var(--blue);
+}
+
+/* ── Problem statement banner ── */
+#problem-statement {
+  background: var(--panel);
+  border: 2.5px solid var(--blue-light);
+  border-radius: 50px;
+  padding: 10px 28px;
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: var(--blue);
+  margin-bottom: 20px;
+  letter-spacing: -0.3px;
+  box-shadow: 0 2px 12px rgba(74,95,213,0.10);
+}
+#problem-statement span.op { color: #3347c0; }
+
+/* ── Place value header ── */
+#place-value-header {
+  display: grid;
+  /* columns set dynamically by JS to match grid */
+  gap: var(--G);
+  margin-bottom: 6px;
+}
+.pv-label {
+  width: var(--S);
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8892bb;
+  line-height: 1.2;
+}
+.pv-label.active-pv {
+  color: var(--blue);
+}
+
+/* ── Problem area ── */
+#problem-area {
+  background: var(--panel);
+  border-radius: 22px;
+  padding: 24px 28px 22px;
+  box-shadow: 0 4px 24px rgba(74,95,213,0.10);
+  border: 1.5px solid var(--border);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.plus-sign {
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: var(--blue);
+  padding-bottom: calc(var(--S) * 0.38);
+  flex-shrink: 0;
+}
+
+#grid-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+#col-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.grid-row {
+  display: grid;
+  gap: var(--G);
+}
+
+/* ── Cells ── */
+.cell {
+  width: var(--S);
+  height: var(--S);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text);
+  border: 2.5px solid var(--cell-border);
+  border-radius: 14px;
+  background: var(--cell-bg);
+  transition: background .2s, border-color .2s, color .2s;
+}
+
+.cell.empty {
+  background: transparent;
+  border-color: transparent;
+  pointer-events: none;
+}
+
+.cell.highlighted {
+  background: var(--active-bg);
+  border-color: var(--active-border);
+  color: var(--active-text);
+}
+
+.cell.dashed {
+  background: var(--dashed-bg);
+  border: 2.5px dashed var(--blue-light);
+  color: transparent;
+}
+
+.cell.answer-green {
+  background: var(--green);
+  border-color: var(--green-dark);
+  color: #fff;
+  animation: popIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* carry cells */
+.carry-cell {
+  width: var(--CS);
+  height: var(--CS);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: transparent;
+  border: 2px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  justify-self: center;
+  align-self: end;
+  transition: all .25s;
+}
+
+.carry-cell.visible {
+  color: var(--purple-light);
+  background: var(--carry-bg);
+  border-color: var(--carry-border);
+  animation: popIn .28s cubic-bezier(.34,1.56,.64,1);
+}
+
+/* triangle */
+.tri-cell {
+  width: var(--S);
+  height: 16px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.tri-cell::after {
+  content: '';
+  width: 0; height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-bottom: 14px solid var(--blue);
+  visibility: hidden;
+}
+.tri-cell.show::after { visibility: visible; }
+
+/* answer line */
+.answer-line {
+  height: 3px;
+  background: var(--blue-light);
+  border-radius: 2px;
+  margin: 5px 0;
+  opacity: .55;
+}
+
+.carry-row {
+  min-height: calc(var(--CS) + 6px);
+  align-items: end;
+  margin-bottom: 3px;
+}
+
+.tri-row { margin-top: 5px; }
+.num-row { margin-top: var(--G); }
+.num-row:first-of-type { margin-top: 0; }
+
+/* ── Input area ── */
+#input-area {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.equation-bar {
+  display: flex;
+  align-items: center;
+  background: var(--panel);
+  border: 2.5px solid var(--blue);
+  border-radius: 50px;
+  padding: 4px 6px;
+  width: 100%;
+  min-height: 62px;
+  transition: border-color .2s;
+  box-shadow: 0 2px 10px rgba(74,95,213,0.08);
+}
+.equation-bar.wrong {
+  border-color: var(--red);
+  animation: shake .35s ease;
+}
+
+.eq-label {
+  background: var(--yellow-bg);
+  border: 1.5px solid var(--yellow-border);
+  border-radius: 40px;
+  padding: 7px 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--yellow);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.eq-display {
+  flex: 1;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  padding: 0 12px;
+  min-width: 0;
+}
+
+.submit-btn {
+  background: var(--blue-dark);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  padding: 9px 20px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: background .15s, transform .1s, opacity .15s;
+  flex-shrink: 0;
+  opacity: .3;
+  pointer-events: none;
+}
+.submit-btn.active { opacity: 1; pointer-events: auto; }
+.submit-btn:hover { background: var(--blue); }
+.submit-btn:active { transform: scale(.96); }
+
+/* keypad */
+.keypad { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.keypad-row { display: flex; gap: 10px; justify-content: center; }
+
+.key-btn {
+  width: 58px; height: 58px;
+  border: 2.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--blue);
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: background .12s, color .12s, transform .1s;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(74,95,213,0.07);
+}
+.key-btn:hover { background: var(--blue-dark); color: #fff; border-color: var(--blue); }
+.key-btn:active, .key-btn.pressed { background: var(--blue); color: #fff; border-color: var(--blue); transform: scale(.92); }
+.key-btn.backspace { background: var(--blue-dark); color: #fff; border-color: var(--blue); }
+.key-btn.backspace:hover { background: var(--blue); }
+
+/* feedback */
+#feedback {
+  border-radius: 14px;
+  padding: 14px 24px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-align: center;
+  display: none;
+  width: 100%;
+  max-width: 460px;
+}
+#feedback.correct  { background: var(--green-bg);  color: var(--green-dark); display: block; border: 1.5px solid var(--green); }
+#feedback.wrong-msg{ background: var(--red-bg);    color: var(--red);        display: block; border: 1.5px solid var(--red); }
+
+#next-btn {
+  display: none;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 13px 34px;
+  font-size: 1.08rem;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+#next-btn:hover { background: var(--green-dark); }
+#next-btn:active { transform: scale(.97); }
+#next-btn.visible { display: block; }
+
+@keyframes popIn {
+  0%   { transform: scale(.55); opacity: .3; }
+  100% { transform: scale(1);   opacity: 1;  }
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-8px); }
+  40%     { transform: translateX(8px); }
+  60%     { transform: translateX(-5px); }
+  80%     { transform: translateX(5px); }
+}
+</style>
+</head>
+<body>
+
+<!-- Mode selector -->
+<div id="mode-selector">
+  <button class="mode-btn active" data-mode="3digit">3-Digit + 3-Digit (Regrouping)</button>
+  <button class="mode-btn" data-mode="4digit">4-Digit + 4-Digit (No Regrouping)</button>
+</div>
+
+<!-- Problem statement -->
+<div id="problem-statement">
+  Problem &nbsp;<span id="ps-num1"></span> <span class="op">+</span> <span id="ps-num2"></span>
+</div>
+
+<!-- Problem area -->
+<div id="problem-area">
+  <div class="plus-sign" id="plus-sign">+</div>
+  <div id="grid-wrapper">
+    <div id="place-value-header"></div>
+    <div id="col-container"></div>
+  </div>
+</div>
+
+<!-- Input area -->
+<div id="input-area">
+  <div class="equation-bar" id="eq-bar">
+    <span class="eq-label" id="eq-label"></span>
+    <span class="eq-display" id="eq-display"></span>
+    <button class="submit-btn" id="submit-btn">Submit</button>
+  </div>
+
+  <div class="keypad">
+    <div class="keypad-row">
+      <button class="key-btn" data-val="1">1</button>
+      <button class="key-btn" data-val="2">2</button>
+      <button class="key-btn" data-val="3">3</button>
+      <button class="key-btn" data-val="4">4</button>
+      <button class="key-btn" data-val="5">5</button>
+      <button class="key-btn" data-val="6">6</button>
+    </div>
+    <div class="keypad-row">
+      <button class="key-btn" data-val="7">7</button>
+      <button class="key-btn" data-val="8">8</button>
+      <button class="key-btn" data-val="9">9</button>
+      <button class="key-btn" data-val="0">0</button>
+      <button class="key-btn backspace" data-val="back">⌫</button>
+    </div>
+  </div>
+
+  <div id="feedback"></div>
+  <button id="next-btn">Next Problem →</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let nums = [];
+let COLS = 0;
+let digits = [];
+let carryRow = [];
+let answerDigits = [];
+let colPhase = 0;
+let currentInput = '';
+let phase = 'solving';
+let currentMode = '3digit'; // '3digit' | '4digit'
+
+const PLACE_LABELS_3 = ['HUNDREDS', 'TENS', 'ONES'];
+const PLACE_LABELS_4 = ['THOUSANDS', 'HUNDREDS', 'TENS', 'ONES'];
+
+// ══════════════════════════════════════════════
+//  PROBLEM GENERATION
+// ══════════════════════════════════════════════
+
+/**
+ * 3-digit + 3-digit WITH regrouping
+ * At least one column (ones or tens) must carry.
+ */
+function gen3DigitRegroup() {
+  while (true) {
+    const a = Math.floor(Math.random() * 800) + 100; // 100–899
+    const b = Math.floor(Math.random() * 800) + 100;
+    const aOnes = a % 10, bOnes = b % 10;
+    const aTens = Math.floor(a / 10) % 10, bTens = Math.floor(b / 10) % 10;
+    if (aOnes + bOnes >= 10 || aTens + bTens >= 10) {
+      return [a, b];
+    }
+  }
+}
+
+/**
+ * 4-digit + 4-digit WITHOUT regrouping
+ * Every column sum < 10.
+ */
+function gen4DigitNoRegroup() {
+  while (true) {
+    const a = Math.floor(Math.random() * 8000) + 1000; // 1000–8999
+    const b = Math.floor(Math.random() * 8000) + 1000;
+    const digits_a = String(a).split('').map(Number);
+    const digits_b = String(b).split('').map(Number);
+    let ok = true;
+    for (let i = 0; i < 4; i++) {
+      if (digits_a[i] + digits_b[i] >= 10) { ok = false; break; }
+    }
+    if (ok) return [a, b];
+  }
+}
+
+function getDigits(n, cols) {
+  const s = String(n);
+  const arr = Array(cols).fill(null);
+  for (let i = 0; i < s.length; i++) {
+    arr[cols - s.length + i] = parseInt(s[i]);
+  }
+  return arr;
+}
+
+function newProblem() {
+  if (currentMode === '3digit') {
+    nums = gen3DigitRegroup();
+    COLS = 3;
+  } else {
+    nums = gen4DigitNoRegroup();
+    COLS = 4;
+  }
+
+  // Answer may have one extra digit (carry overflow for 3-digit)
+  const total = nums[0] + nums[1];
+  const ansLen = String(total).length;
+  if (ansLen > COLS) COLS = ansLen; // e.g. 999+999 = 1998 → 4 cols
+
+  digits = nums.map(n => getDigits(n, COLS));
+
+  answerDigits = Array(COLS).fill(null);
+  let c = 0;
+  for (let col = COLS - 1; col >= 0; col--) {
+    let sum = c;
+    for (let r = 0; r < 2; r++) sum += (digits[r][col] ?? 0);
+    answerDigits[col] = sum % 10;
+    c = Math.floor(sum / 10);
+  }
+
+  carryRow = Array(COLS).fill(0);
+  colPhase = COLS - 1;
+  currentInput = '';
+  phase = 'solving';
+
+  // Update problem statement
+  document.getElementById('ps-num1').textContent = nums[0];
+  document.getElementById('ps-num2').textContent = nums[1];
+
+  buildPlaceValueHeader();
+  buildGrid();
+  renderPhase();
+
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('next-btn').className = '';
+}
+
+// ══════════════════════════════════════════════
+//  PLACE VALUE HEADER
+// ══════════════════════════════════════════════
+function buildPlaceValueHeader() {
+  const header = document.getElementById('place-value-header');
+  header.innerHTML = '';
+  header.style.cssText = `grid-template-columns: repeat(${COLS}, var(--S));`;
+
+  const baseLabels = currentMode === '4digit' ? PLACE_LABELS_4 : PLACE_LABELS_3;
+  const labels = [];
+  for (let i = 0; i < COLS; i++) {
+    const offset = COLS - baseLabels.length;
+    labels.push(i < offset ? 'TEN-THOU' : baseLabels[i - offset]);
+  }
+
+  labels.forEach((lbl, idx) => {
+    const div = document.createElement('div');
+    div.className = 'pv-label';
+    div.id = `pv-${idx}`;
+    div.textContent = lbl;
+    header.appendChild(div);
+  });
+}
+
+function updatePlaceValueHighlight() {
+  document.querySelectorAll('.pv-label').forEach(el => el.classList.remove('active-pv'));
+  const active = document.getElementById(`pv-${colPhase}`);
+  if (active) active.classList.add('active-pv');
+}
+
+// ══════════════════════════════════════════════
+//  BUILD GRID
+// ══════════════════════════════════════════════
+function buildGrid() {
+  const container = document.getElementById('col-container');
+  container.innerHTML = '';
+  const colStyle = `grid-template-columns: repeat(${COLS}, var(--S));`;
+
+  // Carry row
+  const carryRowEl = document.createElement('div');
+  carryRowEl.className = 'grid-row carry-row';
+  carryRowEl.style.cssText = colStyle;
+  carryRowEl.id = 'carry-row';
+  for (let c = 0; c < COLS; c++) {
+    const slot = document.createElement('div');
+    slot.className = 'carry-cell';
+    slot.id = `carry-${c}`;
+    carryRowEl.appendChild(slot);
+  }
+  container.appendChild(carryRowEl);
+
+  // Number rows (2 numbers only)
+  nums.forEach((n, ri) => {
+    const row = document.createElement('div');
+    row.className = 'grid-row num-row';
+    row.style.cssText = colStyle;
+    row.id = `num-row-${ri}`;
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      const d = digits[ri][c];
+      cell.className = d === null ? 'cell empty' : 'cell';
+      cell.textContent = d === null ? '' : d;
+      cell.id = `n${ri}-${c}`;
+      row.appendChild(cell);
+    }
+    container.appendChild(row);
+  });
+
+  // Answer line
+  const line = document.createElement('div');
+  line.className = 'answer-line';
+  container.appendChild(line);
+
+  // Answer row
+  const ansRow = document.createElement('div');
+  ansRow.className = 'grid-row';
+  ansRow.style.cssText = colStyle;
+  ansRow.id = 'ans-row';
+  for (let c = 0; c < COLS; c++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell dashed';
+    cell.id = `ans-${c}`;
+    ansRow.appendChild(cell);
+  }
+  container.appendChild(ansRow);
+
+  // Triangle row
+  const triRow = document.createElement('div');
+  triRow.className = 'grid-row tri-row';
+  triRow.style.cssText = colStyle;
+  triRow.id = 'tri-row';
+  for (let c = 0; c < COLS; c++) {
+    const t = document.createElement('div');
+    t.className = 'tri-cell';
+    t.id = `tri-${c}`;
+    triRow.appendChild(t);
+  }
+  container.appendChild(triRow);
+}
+
+// ══════════════════════════════════════════════
+//  RENDER PHASE
+// ══════════════════════════════════════════════
+function renderPhase() {
+  currentInput = '';
+  document.getElementById('eq-display').textContent = '';
+  document.getElementById('submit-btn').className = 'submit-btn';
+  document.getElementById('eq-bar').className = 'equation-bar';
+
+  document.querySelectorAll('.cell:not(.empty)').forEach(c => c.classList.remove('highlighted'));
+  document.querySelectorAll('.tri-cell').forEach(t => t.classList.remove('show'));
+
+  const col = colPhase;
+
+  for (let ri = 0; ri < 2; ri++) {
+    const cell = document.getElementById(`n${ri}-${col}`);
+    if (cell && !cell.classList.contains('empty')) cell.classList.add('highlighted');
+  }
+
+  const tri = document.getElementById(`tri-${col}`);
+  if (tri) tri.classList.add('show');
+
+  const parts = [];
+  if (carryRow[col] > 0) parts.push(carryRow[col]);
+  for (let ri = 0; ri < 2; ri++) {
+    const d = digits[ri][col];
+    if (d !== null) parts.push(d);
+  }
+  document.getElementById('eq-label').textContent = parts.join(' + ') + ' =';
+
+  updatePlaceValueHighlight();
+}
+
+// ══════════════════════════════════════════════
+//  CHECK ANSWER
+// ══════════════════════════════════════════════
+function checkAnswer() {
+  const val = parseInt(currentInput, 10);
+  if (isNaN(val)) return;
+
+  const col = colPhase;
+  let sum = carryRow[col];
+  for (let ri = 0; ri < 2; ri++) sum += (digits[ri][col] ?? 0);
+
+  const correctDigit = sum % 10;
+  const newCarry = Math.floor(sum / 10);
+  const isCorrect = (val === correctDigit) || (val === sum);
+
+  if (!isCorrect) { showWrong(); return; }
+
+  const ansCell = document.getElementById(`ans-${col}`);
+  ansCell.textContent = correctDigit;
+  ansCell.classList.remove('dashed');
+  ansCell.classList.add('answer-green');
+
+  if (newCarry > 0 && col > 0) {
+    carryRow[col - 1] = newCarry;
+    const carryCell = document.getElementById(`carry-${col - 1}`);
+    if (carryCell) {
+      carryCell.textContent = newCarry;
+      carryCell.classList.add('visible');
+    }
+  }
+
+  colPhase--;
+  if (colPhase < 0) {
+    finishProblem();
+  } else {
+    flashOK(() => renderPhase());
+  }
+}
+
+// ══════════════════════════════════════════════
+//  FINISH / FEEDBACK
+// ══════════════════════════════════════════════
+function finishProblem() {
+  phase = 'done';
+  document.querySelectorAll('.cell:not(.empty)').forEach(c => c.classList.remove('highlighted'));
+  document.querySelectorAll('.tri-cell').forEach(t => t.classList.remove('show'));
+  document.querySelectorAll('.pv-label').forEach(el => el.classList.remove('active-pv'));
+  document.getElementById('eq-label').textContent = '';
+  document.getElementById('eq-display').textContent = '';
+  document.getElementById('submit-btn').className = 'submit-btn';
+  showFeedback('correct', '🎉 Awesome! That\'s correct!');
+  document.getElementById('next-btn').className = 'visible';
+}
+
+function flashOK(cb) {
+  showFeedback('correct', '✓ Nice!');
+  setTimeout(() => { hideFeedback(); cb(); }, 550);
+}
+
+function showWrong() {
+  document.getElementById('eq-bar').classList.add('wrong');
+  showFeedback('wrong-msg', '✗ Try again!');
+  setTimeout(() => {
+    document.getElementById('eq-bar').classList.remove('wrong');
+    hideFeedback();
+  }, 900);
+  currentInput = '';
+  document.getElementById('eq-display').textContent = '';
+  document.getElementById('submit-btn').className = 'submit-btn';
+}
+
+function showFeedback(cls, msg) {
+  const fb = document.getElementById('feedback');
+  fb.textContent = msg;
+  fb.className = cls;
+  fb.style.display = 'block';
+}
+
+function hideFeedback() {
+  const fb = document.getElementById('feedback');
+  fb.className = '';
+  fb.style.display = 'none';
+}
+
+// ══════════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════════
+function handleKey(val) {
+  if (phase === 'done') return;
+  if (val === 'back') {
+    currentInput = currentInput.slice(0, -1);
+  } else {
+    if (currentInput.length >= 2) return;
+    currentInput += val;
+  }
+  document.getElementById('eq-display').textContent = currentInput;
+  document.getElementById('submit-btn').className =
+    currentInput.length > 0 ? 'submit-btn active' : 'submit-btn';
+}
+
+document.querySelectorAll('.key-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const val = btn.dataset.val;
+    btn.classList.add('pressed');
+    setTimeout(() => btn.classList.remove('pressed'), 180);
+    handleKey(val);
+  });
+});
+
+document.getElementById('submit-btn').addEventListener('click', () => {
+  if (currentInput) checkAnswer();
+});
+
+document.getElementById('next-btn').addEventListener('click', newProblem);
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    newProblem();
+  });
+});
+
+document.addEventListener('keydown', e => {
+  if (phase === 'done') return;
+  if (e.key >= '0' && e.key <= '9') handleKey(e.key);
+  else if (e.key === 'Backspace') handleKey('back');
+  else if (e.key === 'Enter' && currentInput) checkAnswer();
+});
+
+// ══════════════════════════════════════════════
+//  START
+// ══════════════════════════════════════════════
+newProblem();
+</script>
+</body>
+</html>
